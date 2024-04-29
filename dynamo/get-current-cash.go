@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
+	helperFunctions "my-lambda-app/helperFunctions"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -42,10 +42,7 @@ func GetCashTotal(recordType string) PortfolioDistribution {
 
 	distribution.Symbol = recordType
 	val := result.Item["Amount"].(*types.AttributeValueMemberN)
-	distribution.Amount, err = strconv.ParseFloat(val.Value, 64)
-	if err != nil {
-		log.Fatalf("Failed to parse Amount, %v", err)
-	}
+	distribution.Amount = helperFunctions.FloatConverter(val.Value)
 
 	return distribution
 }

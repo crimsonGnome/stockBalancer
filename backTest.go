@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+
 	AthenaCall "my-lambda-app/athena"
 	dynamo "my-lambda-app/dynamo"
+	helperFunctions "my-lambda-app/helperFunctions"
 
 	"github.com/aws/aws-lambda-go/events"
 )
@@ -16,9 +18,6 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 	// Loop over data ( build first with just one data set)
 	// call the SQL athena function to get actual values
 	currentStockPrices := AthenaCall.SQL_date_Price(date)
-	for _, result := range *currentStockPrices {
-		fmt.Println(result)
-	}
 	// ------------------ Get Current cash Balance ----------------------------------------------
 
 	// Call Get Current Portfolio distribution
@@ -35,12 +34,7 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 	} else {
 		currentCash := dynamo.GetCashTotal("historicalCashBackTest")
 		totalCash = currentCash.Amount + CalculateCashTotal(currentPortfolio, currentStockPrices)
-		fmt.Printf("Total Cash %f", totalCash)
-
-		// call Dynamo if empty just get skip next step
-		// calculate Current Portfolio Prices based on athena data and my distribution ()
-
-		// Get current cash by adding leftOver cash table + current Portfolio market rate
+		fmt.Println("Total Cash:", totalCash)
 	}
 
 	// --------------------------------------------------------------------------------
@@ -66,6 +60,20 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 
 func CalculateCashTotal(currentPortfolio *[]dynamo.PortfolioDistribution, currentStockPrices *[]map[string]string) float64 {
 	totalCash := 0.0
+	portfolioMap := make(map[string]float64)
+	for i := 0; i < len(*currentPortfolio); i++ {
+		portfolioMap[(*currentPortfolio)[i].Symbol] = (*currentPortfolio)[i].Amount
+	}
+
+	for _, record := range *currentStockPrices {
+		amount, ok := portfolioMap[record["symbol"]]
+		if !ok {
+			continue
+		}
+
+		fmt.Println("In portfolio:", record["symbol"])
+		totalCash = totalCash + (amount * helperFunctions.FloatConverter(record["close"]))
+	}
 
 	return totalCash
 
