@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena/types"
 )
 
-func SQL_date_Price(date string) []map[string]string {
+func SQL_date_Price(date string) *[]map[string]string {
 	ctx := context.TODO()
 
 	// Load the AWS SDK for Go configuration
@@ -102,5 +102,5 @@ func SQL_date_Price(date string) []map[string]string {
 
 	}
 
-	return results
+	return &results
 }
