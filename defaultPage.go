@@ -1,10 +1,13 @@
 package main
 
 import (
-	"encoding/json"
-	"net/http"
+	"github.com/aws/aws-lambda-go/events"
 )
 
-func DefaultPage(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]string{"message": "Welcome to the default page"})
+func HandleDefault() events.APIGatewayProxyResponse {
+	return events.APIGatewayProxyResponse{
+		StatusCode: 200,
+		Body:       jsonMessage("Welcome to the API"),
+		Headers:    map[string]string{"Content-Type": "application/json"},
+	}
 }
