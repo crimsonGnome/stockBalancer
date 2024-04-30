@@ -19,7 +19,7 @@ type PortfolioDistribution struct {
 }
 
 // Initialize a DynamoDB client
-func getClient() *dynamodb.Client {
+func GetClient() *dynamodb.Client {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatalf("unable to load SDK config, %v", err)
@@ -28,8 +28,7 @@ func getClient() *dynamodb.Client {
 }
 
 // Fetch all items from the specified table
-func GetPortfolio(recordType string) *[]PortfolioDistribution {
-	client := getClient()
+func GetPortfolio(recordType string, client *dynamodb.Client) *[]PortfolioDistribution {
 	// Specify the table name and the primary key of the item
 	tableName := "stock-current-portfolio"
 	itemKey := map[string]types.AttributeValue{
@@ -59,6 +58,9 @@ func GetPortfolio(recordType string) *[]PortfolioDistribution {
 	var distributions []PortfolioDistribution
 
 	val := result.Item["portfolio"].(*types.AttributeValueMemberSS)
+	if val.Value[0] == "empty" {
+		return &distributions
+	}
 	fmt.Println("val from portfolio:", val)
 	for i := 0; i < len(val.Value); i++ {
 		var tempDistribution PortfolioDistribution

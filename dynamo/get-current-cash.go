@@ -11,8 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func GetCashTotal(recordType string) PortfolioDistribution {
-	client := getClient()
+func GetCashTotal(recordType string, client *dynamodb.Client) PortfolioDistribution {
 	// Specify the table name and the primary key of the item
 	tableName := "stock-current-portfolio"
 	itemKey := map[string]types.AttributeValue{
