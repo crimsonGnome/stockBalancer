@@ -33,82 +33,84 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 	// Loop through back data Data
 	// Define back test Data Loop
 	client := dynamo.GetClient()
-	date := "2017-02-14"
-	exampleArray := []string{"2017-05-15", "2017-08-14", "2017-11-14", "2018-02-14"}
-	counter := 0
-	// dateArray := [46]string{"2012-02-14", "2012-05-14", "2012-08-14", "2012-11-14","2013-02-14", "2013-05-14", "2013-08-14", "2013-11-14",
-	// 	"2014-02-14", "2014-05-14", "2014-08-14", "2014-11-14", "2015-02-13", "2015-05-14", "2015-08-14", "2015-11-13",
-	// 	"2016-02-12", "2016-05-13", "2016-08-15", "2016-11-14", "2017-02-14", "2017-05-15", "2017-08-14", "2017-11-14",
-	// 	"2018-02-14", "2018-05-14", "2018-08-14", "2018-11-14", "2019-02-14", "2019-05-14", "2019-08-14", "2019-11-14",
-	// 	"2020-02-14", "2020-05-14", "2020-08-14", "2020-11-13", "2021-02-12", "2021-05-14", "2021-08-13", "2021-11-15",
-	// 	"2022-02-14", "2022-05-13", "2022-08-15", "2022-11-14", "2023-02-14", "2023-05-12", "2023-08-14", "2023-11-14",
-	// 	"2024-02-14", "2024-05-13"}
+	// date := "2017-02-14"
+	// exampleArray := []string{"2017-05-15", "2017-08-14", "2017-11-14", "2018-02-14"}
+	// counter := 0
+	dateArray := []string{"2012-02-14", "2012-05-14", "2012-08-14", "2012-11-14", "2013-02-14", "2013-05-14", "2013-08-14", "2013-11-14",
+		"2014-02-14", "2014-05-14", "2014-08-14", "2014-11-14", "2015-02-13", "2015-05-14", "2015-08-14", "2015-11-13",
+		"2016-02-12", "2016-05-13", "2016-08-15", "2016-11-14", "2017-02-14", "2017-05-15", "2017-08-14", "2017-11-14",
+		"2018-02-14", "2018-05-14", "2018-08-14", "2018-11-14", "2019-02-14", "2019-05-14", "2019-08-14", "2019-11-14",
+		"2020-02-14", "2020-05-14", "2020-08-14", "2020-11-13", "2021-02-12", "2021-05-14", "2021-08-13", "2021-11-15",
+		"2022-02-14", "2022-05-13", "2022-08-15", "2022-11-14", "2023-02-14", "2023-05-12", "2023-08-14", "2023-11-14",
+		"2024-02-14", "2024-05-13", "2024-07-23", "2024-10-21", "2025-01-19", "2025-04-19"}
 
 	// Loop over data ( build first with just one data set)
 	// call the SQL athena function to get actual values
-	currentStockPrices := AthenaCall.SQL_date_Price(date)
-	// ------------------ Get Current cash Balance ----------------------------------------------
+	for i := 0; i < len(dateArray)-4; i++ {
+		currentStockPrices := AthenaCall.SQL_date_Price(dateArray[i])
+		// ------------------ Get Current cash Balance ----------------------------------------------
 
-	// Call Get Current Portfolio distribution
-	currentPortfolio := dynamo.GetPortfolio("historicalTestPortfolio", client)
-	totalCash := 0.0
-	fmt.Println("Printing current portfolio:", *currentPortfolio)
-	if len(*currentPortfolio) == 0 {
-		// Get current cash by accessing cashTable
-		currentCash := dynamo.GetCashTotal("historicalCashBackTest", client)
-		totalCash = currentCash.Amount
+		// Call Get Current Portfolio distribution
+		currentPortfolio := dynamo.GetPortfolio("historicalTestPortfolio", client)
+		totalCash := 0.0
+		fmt.Println("Printing current portfolio:", *currentPortfolio)
+		if len(*currentPortfolio) == 0 {
+			// Get current cash by accessing cashTable
+			currentCash := dynamo.GetCashTotal("historicalCashBackTest", client)
+			totalCash = currentCash.Amount
 
-		fmt.Println("Printing current cash:", currentCash)
-		fmt.Println("Total Cash:", totalCash)
-	} else {
-		currentCash := dynamo.GetCashTotal("historicalCashBackTest", client)
-		totalCash = currentCash.Amount + CalculateCashTotal(currentPortfolio, currentStockPrices)
-		fmt.Println("Total Cash:", totalCash)
-	}
+			fmt.Println("Printing current cash:", currentCash)
+			fmt.Println("Total Cash:", totalCash)
+		} else {
+			currentCash := dynamo.GetCashTotal("historicalCashBackTest", client)
+			totalCash = currentCash.Amount + CalculateCashTotal(currentPortfolio, currentStockPrices)
+			fmt.Println("Total Cash:", totalCash)
+		}
 
-	// --------------------------------------------------------------------------------
+		// --------------------------------------------------------------------------------
 
-	// Get Predictions  in the range of Dynamo table (Eliminate all stocks that are below .5 bias)
-	predictions := TradingWeight(*currentStockPrices, exampleArray, counter, client, context.TODO())
-	fmt.Println("prediction map", predictions)
+		// Get Predictions  in the range of Dynamo table (Eliminate all stocks that are below .5 bias)
+		predictions := TradingWeight(*currentStockPrices, dateArray, i+1, client, context.TODO())
+		fmt.Println("prediction map", predictions)
 
-	// Call UpdatePortfolio - creates a new portfolio
-	updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions)
-	fmt.Println("share distribution", updatedPortfolio)
+		// Call UpdatePortfolio - creates a new portfolio
+		updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions)
+		fmt.Println("share distribution", updatedPortfolio)
 
-	// rectify_portfolio - buy and sell data into new table - save logs in portfolio transaction
-	buys, sells := RectifyPortfolio(date, currentPortfolio, &updatedPortfolio)
+		// rectify_portfolio - buy and sell data into new table - save logs in portfolio transaction
+		buys, sells := RectifyPortfolio(dateArray[i], currentPortfolio, &updatedPortfolio)
 
-	fmt.Println("Buys:", buys)
-	fmt.Println("Sells:", sells)
-	// save new Portfolio distribution in dynamo table
-	stringPortfolio := ConvertPortToString(updatedPortfolio)
-	err := dynamo.PutCurrentPortfolio("historicalTestPortfolio", stringPortfolio, client)
-	if err != nil {
-		log.Fatalf("Failed to PutCurrentPortfolio: %v", err)
-	}
+		fmt.Println("Buys:", buys)
+		fmt.Println("Sells:", sells)
+		// save new Portfolio distribution in dynamo table
+		stringPortfolio := ConvertPortToString(updatedPortfolio)
+		err := dynamo.PutCurrentPortfolio("historicalTestPortfolio", stringPortfolio, client)
+		if err != nil {
+			log.Fatalf("Failed to PutCurrentPortfolio: %v", err)
+		}
 
-	// Update Transaction Trade Logs
-	// Update Cash Table
-	dynamo.PutCurrentCash("historicalCashBackTest", cashUpdate, client)
-	if err != nil {
-		log.Fatalf("BatchWriteTransactionHistory Sells: %v", err)
-	}
-
-	// Update Sells
-	if len(*sells) != 0 {
-		dynamo.BatchWriteTransactionHistory(*sells, client)
+		// Update Transaction Trade Logs
+		// Update Cash Table
+		dynamo.PutCurrentCash("historicalCashBackTest", cashUpdate, client)
 		if err != nil {
 			log.Fatalf("BatchWriteTransactionHistory Sells: %v", err)
 		}
-	}
 
-	// Update Buys
-	dynamo.BatchWriteTransactionHistory(*buys, client)
-	if err != nil {
-		log.Fatalf("BatchWriteTransactionHistory Sells: %v", err)
-	}
+		// Update Sells
+		if len(*sells) != 0 {
+			dynamo.BatchWriteTransactionHistory(*sells, client)
+			if err != nil {
+				log.Fatalf("BatchWriteTransactionHistory Sells: %v", err)
+			}
+		}
 
+		// Update Buys
+		dynamo.BatchWriteTransactionHistory(*buys, client)
+		if err != nil {
+			log.Fatalf("BatchWriteTransactionHistory Sells: %v", err)
+		}
+
+	}
 	// Example processing for the /backTest path
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,

@@ -20,6 +20,8 @@ func Handler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (event
 		return HandleBackTest(), nil
 	case "/trade":
 		return HandleTrade(), nil
+	case "/calculate":
+		return CalculateBackTest(), nil
 	default:
 		return events.APIGatewayProxyResponse{
 			StatusCode: 404,
