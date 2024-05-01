@@ -4,13 +4,14 @@ import (
 	"fmt"
 	AthenaCall "my-lambda-app/athena"
 	dynamo "my-lambda-app/dynamo"
+	env "my-lambda-app/env"
 
 	"github.com/aws/aws-lambda-go/events"
 )
 
 func CalculateBackTest() events.APIGatewayProxyResponse {
 	client := dynamo.GetClient()
-	date := "2019-11-14"
+	date := env.ENV_END_DATE
 	currentStockPrices := AthenaCall.SQL_date_Price(date)
 
 	currentCash := dynamo.GetCashTotal("historicalCashBackTest", client)

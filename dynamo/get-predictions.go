@@ -14,6 +14,7 @@ type PredictionPriceQuery struct {
 	Price          float64
 	Bias           float64
 	MedianDistance float64
+	MeanDistance   float64
 	DefaultError   float64
 }
 
@@ -51,6 +52,9 @@ func ScanPredictions(dateInput string, client *dynamodb.Client, ctx context.Cont
 		}
 		if val, ok := itemMap["medianDistance"].(*types.AttributeValueMemberN); ok {
 			temp.MedianDistance = helperFunctions.FloatConverter(val.Value)
+		}
+		if val, ok := itemMap["meanDistance"].(*types.AttributeValueMemberN); ok {
+			temp.MeanDistance = helperFunctions.FloatConverter(val.Value)
 		}
 		if val, ok := itemMap["defaultError"].(*types.AttributeValueMemberN); ok {
 			temp.DefaultError = helperFunctions.FloatConverter(val.Value)
