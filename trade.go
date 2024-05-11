@@ -5,7 +5,6 @@ import (
 )
 
 func HandleTrade() events.APIGatewayProxyResponse {
-	// Example processing for the /trade path
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Body:       jsonMessage("Trade executed"),

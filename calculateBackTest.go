@@ -11,6 +11,7 @@ import (
 
 func CalculateBackTest() events.APIGatewayProxyResponse {
 	client := dynamo.GetClient()
+	// Get Set Date in lambda -set for back Test
 	date := env.ENV_END_DATE
 	currentStockPrices := AthenaCall.SQL_date_Price(date)
 
@@ -20,7 +21,6 @@ func CalculateBackTest() events.APIGatewayProxyResponse {
 
 	fmt.Println("Total Cash:", totalCash)
 	message := fmt.Sprintf("Total cash %f", totalCash)
-	// Example processing for the /backTest path
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Body:       jsonMessage(message),

@@ -102,7 +102,6 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 		}
 
 	}
-	// Example processing for the /backTest path
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Body:       jsonMessage("BackTest process started"),
@@ -141,17 +140,17 @@ func TradingWeight(currentStocks []map[string]string, dates []string, counter in
 		}
 		for _, prediction := range *predictions {
 			// Median Distance
-			if prediction.Bias < 0.5 {
+			if prediction.Bias < 0.45 {
 				continue
 			}
-			// Mean Distance
-			if prediction.MeanDistance < 0 {
-				continue
-			}
-			// Model Is not accurate enough
-			if prediction.DefaultError > 30.0 {
-				continue
-			}
+			// // Mean Distance
+			// if prediction.MeanDistance < 0 {
+			// 	continue
+			// }
+			// // Model Is not accurate enough
+			// if prediction.DefaultError > 30.0 {
+			// 	continue
+			// }
 
 			data, ok := predictedData[prediction.Symbol]
 			if !ok {
@@ -174,7 +173,11 @@ func TradingWeight(currentStocks []map[string]string, dates []string, counter in
 	}
 
 	for symbol, data := range predictedData {
-		data.PredictedPrice += (data.Bias * 2 * data.MedianDistance)
+		predictionBias := data.Bias
+		// if predictionBias < .5 {
+		// 	predictionBias += .5
+		// }
+		data.PredictedPrice += (predictionBias * 2 * data.MedianDistance)
 		predictedData[symbol] = data
 	}
 
@@ -211,7 +214,8 @@ func UpdatePortfolio(totalCash float64, predictions *map[string]PredictionData) 
 	})
 
 	// Take top 10 share distribution
-	for i := 0; i < 10; i++ {
+	portfolioMaxBalance := min(10, (len(*predictions)))
+	for i := 0; i < portfolioMaxBalance; i++ {
 		shares := (totalCash * weights[i]) / allPredictions[i].OriginalPrice
 		floorNumber := math.Floor(shares) // Take the floor of the number
 		shareNumber := int(floorNumber)   // Convert the floor number to int
