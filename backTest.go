@@ -6,9 +6,11 @@ import (
 	"log"
 	"math"
 	"sort"
+	"time"
 
 	AthenaCall "my-lambda-app/athena"
 	dynamo "my-lambda-app/dynamo"
+	"my-lambda-app/env"
 	helperFunctions "my-lambda-app/helperFunctions"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -37,17 +39,68 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 	// exampleArray := []string{"2017-05-15", "2017-08-14", "2017-11-14", "2018-02-14"}
 	// counter := 0
 	// Stopping 02-14 Not all data is up to 5-13
-	dateArray := []string{"2012-02-14", "2012-05-14", "2012-08-14", "2012-11-14", "2013-02-14", "2013-05-14", "2013-08-14", "2013-11-14",
-		"2014-02-14", "2014-05-14", "2014-08-14", "2014-11-14", "2015-02-13", "2015-05-14", "2015-08-14", "2015-11-13",
-		"2016-02-12", "2016-05-13", "2016-08-15", "2016-11-14", "2017-02-14", "2017-05-15", "2017-08-14", "2017-11-14",
-		"2018-02-14", "2018-05-14", "2018-08-14", "2018-11-14", "2019-02-14", "2019-05-14", "2019-08-14", "2019-11-14",
-		"2020-02-14", "2020-05-14", "2020-08-14", "2020-11-13", "2021-02-12", "2021-05-14", "2021-08-13", "2021-11-15",
+	// TODO: Dynamicaly Set the array
+
+	// predictionArray0 := []string{"2012-02-14", "2012-05-14", "2012-08-14", "2012-11-14", "2013-02-14", "2013-05-14", "2013-08-14", "2013-11-14",
+	// 	"2014-02-14", "2014-05-14", "2014-08-14", "2014-11-14", "2015-02-13", "2015-05-14", "2015-08-14", "2015-11-13",
+	// 	"2016-02-12", "2016-05-13", "2016-08-15", "2016-11-14", "2017-02-14", "2017-05-15", "2017-08-14", "2017-11-14",
+	// 	"2018-02-14", "2018-05-14", "2018-08-14", "2018-11-14", "2019-02-14", "2019-05-14", "2019-08-14", "2019-11-14",
+	// 	"2020-02-14", "2020-05-14", "2020-08-14", "2020-11-13", "2021-02-12", "2021-05-14", "2021-08-13", "2021-11-15",
+	// 	"2022-02-14", "2022-05-13", "2022-08-15", "2022-11-14", "2023-02-14", "2023-05-12", "2023-08-14", "2023-11-14",
+	// 	"2024-02-14", "2024-05-13", "2024-07-23", "2024-10-21", "2025-01-19"}
+
+	// Prediction for 2016-2019 (jan1 -jan1 )
+	// predictionArray1 := []string{
+	// 	"2016-02-12", "2016-05-13", "2016-08-15", "2016-11-14", "2017-02-14", "2017-05-15", "2017-08-14", "2017-11-14",
+	// 	"2018-02-14", "2018-05-14", "2018-08-14", "2018-11-14", "2019-02-14", "2019-05-14", "2019-08-14", "2019-11-14",
+	// 	"2020-02-14"}
+
+	// Prediction for 2021-2024 (jan1 -jan1 )
+	// predictionArray2 := []string{"2021-02-12", "2021-05-14", "2021-08-13", "2021-11-15",
+	// 	"2022-02-14", "2022-05-13", "2022-08-15", "2022-11-14", "2023-02-14", "2023-05-12", "2023-08-14", "2023-11-14",
+	// 	"2024-02-14", "2024-05-13", "2024-07-23", "2024-10-21", "2025-01-19"}
+
+	predictionArray := []string{
 		"2022-02-14", "2022-05-13", "2022-08-15", "2022-11-14", "2023-02-14", "2023-05-12", "2023-08-14", "2023-11-14",
 		"2024-02-14", "2024-05-13", "2024-07-23", "2024-10-21", "2025-01-19"}
 
 	// Loop over data ( build first with just one data set)
 	// call the SQL athena function to get actual values
-	for i := 0; i < len(dateArray)-4; i++ {
+	// TODO: Loop every 3 intergers start Date End Date - no longer Hard Coded
+	// TODO: Need to gather
+	// TODO compare dates and if future date is greater then current date, move date itterator
+	predictionIterator := 0
+	predictionString := predictionArray[predictionIterator]
+
+	dateArray := helperFunctions.ReverseSlice(env.DateArray)
+
+	// Convert current date TIme string into a Date time
+	predictionTime, err := time.Parse("2006-01-02", predictionString)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for i := 0; i < len(dateArray); i += 5 {
+
+		dateStringDaily := dateArray[i]
+
+		// Convert current date TIme string into a Date time
+		dateTimeDaily, err := time.Parse("2006-01-02", dateStringDaily)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Compare times to adjust
+		if dateTimeDaily.Unix() >= predictionTime.Unix() {
+			predictionIterator += 1
+			predictionString = predictionArray[predictionIterator]
+
+			predictionTime, err = time.Parse("2006-01-02", predictionString)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+		}
 		currentStockPrices := AthenaCall.SQL_date_Price(dateArray[i])
 
 		// Call Get Current Portfolio distribution
@@ -65,7 +118,7 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 		}
 
 		// Get Predictions  in the range of Dynamo table (Eliminate all stocks that are below .5 bias)
-		predictions := TradingWeight(*currentStockPrices, dateArray, i+1, client, context.TODO())
+		predictions := TradingWeight(*currentStockPrices, predictionArray, predictionIterator, client, context.TODO())
 
 		// Call UpdatePortfolio - creates a new portfolio
 		updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions)
@@ -75,7 +128,7 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 
 		// save new Portfolio distribution in dynamo table
 		stringPortfolio := ConvertPortToString(updatedPortfolio)
-		err := dynamo.PutCurrentPortfolio("historicalTestPortfolio", stringPortfolio, client)
+		err = dynamo.PutCurrentPortfolio("historicalTestPortfolio", stringPortfolio, client)
 		if err != nil {
 			log.Fatalf("Failed to PutCurrentPortfolio: %v", err)
 		}
@@ -177,17 +230,30 @@ func TradingWeight(currentStocks []map[string]string, dates []string, counter in
 		// if predictionBias < .5 {
 		// 	predictionBias += .5
 		// }
+		// Date modifier medianDistance
 		data.PredictedPrice += (predictionBias * 2 * data.MedianDistance)
 		predictedData[symbol] = data
+
 	}
 
 	for _, stock := range currentStocks {
+		// Find Current Stock in map
 		data, ok := predictedData[stock["symbol"]]
 		if !ok {
 			continue
 		}
 		originalPrice := helperFunctions.FloatConverter(stock["close"])
 		data.OriginalPrice = originalPrice
+		fmt.Printf("Retrieved stock: %v\n", stock)
+		MovingAverage200Days := helperFunctions.FloatConverter(stock["movingaverage200days"])
+		MovingAverage50Days := helperFunctions.FloatConverter(stock["movingaverage50days"])
+		// Golden Cross boost
+		if MovingAverage200Days > MovingAverage50Days {
+			data.PredictedPrice = data.PredictedPrice * .85
+		} else {
+			data.PredictedPrice = data.PredictedPrice * 1.15
+		}
+
 		data.GrowthRate = data.PredictedPrice / originalPrice
 		predictedData[stock["symbol"]] = data
 

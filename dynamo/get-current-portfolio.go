@@ -58,7 +58,9 @@ func GetPortfolio(recordType string, client *dynamodb.Client) *[]PortfolioDistri
 	var distributions []PortfolioDistribution
 
 	val := result.Item["portfolio"].(*types.AttributeValueMemberSS)
+	fmt.Printf("Retrieved item: %v\n", result.Item)
 	if val.Value[0] == "empty" {
+		fmt.Println("hit- empty")
 		return &distributions
 	}
 	fmt.Println("val from portfolio:", val)
