@@ -21,6 +21,8 @@ func Handler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (event
 	case "/trade":
 		return HandleTrade(), nil
 	case "/calculate":
+		return CalculateCurrentCash(), nil
+	case "/calculateBackTest":
 		return CalculateBackTest(), nil
 	default:
 		return events.APIGatewayProxyResponse{
