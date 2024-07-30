@@ -12,6 +12,7 @@ import (
 
 func HandleDefault() events.APIGatewayProxyResponse {
 	client := dynamo.GetClient()
+	currentPredictionFlag := true
 	dateStringDaily := env.ENV_CURRENT_DATE
 	predictionArray := env.ENV_FUTURE_PREDICTIONS
 
@@ -42,7 +43,7 @@ func HandleDefault() events.APIGatewayProxyResponse {
 	predictions := TradingWeight(*currentStockPrices, predictionArray, 0, client, context.TODO())
 
 	// Call UpdatePortfolio - creates a new portfolio
-	updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions)
+	updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions, currentPredictionFlag, client)
 
 	// rectify_portfolio - buy and sell data into new table - save logs in portfolio transaction
 	buys, sells := RectifyPortfolio(dateStringDaily, currentPortfolio, &updatedPortfolio)

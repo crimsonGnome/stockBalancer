@@ -17,15 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-type PredictionData struct {
-	Symbol         string
-	PredictedPrice float64
-	Bias           float64
-	MedianDistance float64
-	OriginalPrice  float64
-	GrowthRate     float64
-}
-
 type Portfolio struct {
 	Symbol string
 	Amount int
@@ -73,6 +64,7 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 	predictionString := predictionArray[predictionIterator]
 
 	dateArray := helperFunctions.ReverseSlice(env.DateArray)
+	currentPredictionFlag := false
 
 	// Convert current date TIme string into a Date time
 	predictionTime, err := time.Parse("2006-01-02", predictionString)
@@ -121,7 +113,7 @@ func HandleBackTest() events.APIGatewayProxyResponse {
 		predictions := TradingWeight(*currentStockPrices, predictionArray, predictionIterator, client, context.TODO())
 
 		// Call UpdatePortfolio - creates a new portfolio
-		updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions)
+		updatedPortfolio, cashUpdate := UpdatePortfolio(totalCash, &predictions, currentPredictionFlag, client)
 
 		// rectify_portfolio - buy and sell data into new table - save logs in portfolio transaction
 		buys, sells := RectifyPortfolio(dateArray[i], currentPortfolio, &updatedPortfolio)
@@ -183,8 +175,8 @@ func CalculateCashTotal(currentPortfolio *[]dynamo.PortfolioDistribution, curren
 
 }
 
-func TradingWeight(currentStocks []map[string]string, dates []string, counter int, client *dynamodb.Client, ctx context.Context) map[string]PredictionData {
-	predictedData := make(map[string]PredictionData)
+func TradingWeight(currentStocks []map[string]string, dates []string, counter int, client *dynamodb.Client, ctx context.Context) map[string]dynamo.PredictionData {
+	predictedData := make(map[string]dynamo.PredictionData)
 	for i := 0; i < 4; i++ {
 		predictions, err := dynamo.ScanPredictions(dates[counter+i], client, ctx)
 		if err != nil {
@@ -208,7 +200,7 @@ func TradingWeight(currentStocks []map[string]string, dates []string, counter in
 			data, ok := predictedData[prediction.Symbol]
 			if !ok {
 				priceModifier := .1 * prediction.Price
-				data = PredictionData{
+				data = dynamo.PredictionData{
 					Symbol:         prediction.Symbol,
 					PredictedPrice: priceModifier,
 					Bias:           prediction.Bias,
@@ -261,12 +253,12 @@ func TradingWeight(currentStocks []map[string]string, dates []string, counter in
 	return predictedData
 }
 
-func UpdatePortfolio(totalCash float64, predictions *map[string]PredictionData) ([]Portfolio, float64) {
+func UpdatePortfolio(totalCash float64, predictions *map[string]dynamo.PredictionData, currentPredictionFlag bool, client *dynamodb.Client) ([]Portfolio, float64) {
 	// 16 + 14 + 14 + 12 + 10 + 10 + 8 + 6 + 6 + 4
 	weights := []float64{.16, .14, .14, .12, .10, .10, .08, .06, .06, .04}
 	var newPortfolio []Portfolio
 	cashBalance := totalCash
-	allPredictions := make([]PredictionData, 0, len(*predictions))
+	allPredictions := make([]dynamo.PredictionData, 0, len(*predictions))
 
 	// Extracting all PredictionData from the map
 	for _, pd := range *predictions {
@@ -278,6 +270,15 @@ func UpdatePortfolio(totalCash float64, predictions *map[string]PredictionData) 
 		// sort descending
 		return allPredictions[i].GrowthRate > allPredictions[j].GrowthRate
 	})
+
+	fmt.Println("hit Update Portfolio")
+	if currentPredictionFlag {
+		fmt.Println("hit Update CurrentPredictionFlag")
+		err := dynamo.BatchWritePredictionWeights(allPredictions, client)
+		if err != nil {
+			log.Fatalf("BatchWritePredictionWeights Sells: %v", err)
+		}
+	}
 
 	// Take top 10 share distribution
 	portfolioMaxBalance := min(10, (len(*predictions)))
@@ -304,7 +305,6 @@ func UpdatePortfolio(totalCash float64, predictions *map[string]PredictionData) 
 		}
 
 		newPortfolio = append(newPortfolio, temp)
-
 	}
 	return newPortfolio, cashBalance
 
